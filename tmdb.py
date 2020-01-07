@@ -15,6 +15,8 @@ DBPATH = os.path.join(*settings["dbpath"].split("/"))
 MEDIA_PATHS = settings["media_paths"]
 EXTENSION_BLACKLIST = settings["extension_blacklist"]
 FFPROBE_LOCATION = settings["ffprobe_location"]
+IMG_PATH = os.path.join(*settings["imgpath"].split("/"))
+IMG_PREFIX = settings["img_prefix"]
 
 APICALLS = 0
 
