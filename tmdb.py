@@ -14,6 +14,7 @@ LANGUAGE = settings["language"]
 DBPATH = os.path.join(*settings["dbpath"].split("/"))
 MEDIA_PATHS = settings["media_paths"]
 EXTENSION_BLACKLIST = settings["extension_blacklist"]
+FFPROBE_LOCATION = settings["ffprobe_location"]
 
 APICALLS = 0
 
@@ -52,9 +53,17 @@ def searchOneFilm(title, year):
 if __name__ == "__main__":
     db = database.Database()
     for path in MEDIA_PATHS:
-        for dir_ in os.listdir(path):
-            # print(os.path.join(path, dir_))
-            files.find_film(os.path.join(path, dir_))
+        if os.path.exists(path):
+            for dir_ in os.listdir(path):
+                if "(" in os.path.split(dir_)[-1]:
+                    s = os.path.split(dir_)[-1].split("(")
+                    title = s[0]
+                    year = int(s[1][:4])
+                    filmfile = files.find_film(os.path.join(path, dir_))
+                    db.add_film(filmfile, searchOneFilm(title, year))
+                    print(title, year)
+
+
 
     
     print("\n\n", APICALLS, "API calls")

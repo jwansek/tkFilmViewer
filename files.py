@@ -1,29 +1,45 @@
 import subprocess
+import platform
 import tmdb
 import json
 import os
 
 def find_film(path):
-    if "(" in os.path.split(path)[-1]:
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                videopath = os.path.join(root, file)
-                if os.path.splitext(videopath)[-1] not in tmdb.EXTENSION_BLACKLIST:
-                    try:
-                        print(videopath)
-                        md = Metadata(videopath)
-                        print(md.get_frames())
-                        print(md.get_fps())
-                        print()
-                    except MetadataException:
-                        pass
+    """Gets the full path of the film file in a folder.
+    Works by getting the video file with the most frames in it.
+    
+    Arguments:
+        path {str} -- path to the directory to check
+    
+    Returns:
+        str -- full path of the film
+    """
+    longestfile = [None, 0]
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            videopath = os.path.join(root, file)
+            if os.path.splitext(videopath)[-1] not in tmdb.EXTENSION_BLACKLIST:
+                try:
+                    md = Metadata(videopath)
+                    len_ = len(md)
+                    if len_ > longestfile[1]:
+                        longestfile = [videopath, len_]
+                except MetadataException:
+                    pass
+
+    return longestfile[0]
 
 class Metadata:
     def __init__(self, path):
         self.path = path
 
+        if platform.system() != "Windows":
+            self._ffprobe = "ffprobe"
+        else:
+            self._ffprobe = tmdb.FFPROBE_LOCATION
+
     def _probe(self, args):
-        proc = subprocess.Popen(["ffprobe", "-v", "error"] + args + ["-print_format", "json", self.path], stdout=subprocess.PIPE)
+        proc = subprocess.Popen([self._ffprobe, "-v", "error"] + args + ["-print_format", "json", self.path], stdout=subprocess.PIPE)
         jsonout = ""
         while True:
             line = proc.stdout.readline()
@@ -36,8 +52,11 @@ class Metadata:
     def get_all(self):
         return self._probe(args = ["-show_streams"])
 
-    def get_frames(self):
-        return self._probe(args = ["-show_entries", "format=duration"])["format"]
+    def __len__(self):
+        try:
+            return int(float(self._probe(args = ["-show_entries", "format=duration"])["format"]["duration"]))
+        except KeyError as e:
+            raise MetadataException("Couldn't get the length for %s" % self.path)
 
     def get_fps(self):
         try:
@@ -50,7 +69,3 @@ class Metadata:
 class MetadataException(Exception):
     pass
 
-
-if __name__ == "__main__":
-    # get_file_metadata("/media/veracrypt2/Videos/War Games (1983)/War Games [1983] =25th Anniversary Edition=.mkv")
-    get_file_metadata("tmdb.py")
