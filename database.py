@@ -106,7 +106,23 @@ class Database:
 
         self.connection.commit()
 
+    def get_all_paths(self):
+        self.cursor.execute("SELECT path FROM films;")
+        return [i[0] for i in self.cursor.fetchall()]
+
+    def compare_paths(self, mediadata):
+        dbpaths = {os.path.split(i[0])[:-1][0] for i in self.get_all_paths() if os.path.split(i[0])[:-1][0] != ""}
+        return list(set(mediadata) - dbpaths)
+        
+    def get_poster_img(self, path):
+        self.cursor.execute("SELECT poster_img FROM films WHERE path = ?", (path, ))
+        try:
+            return self.cursor.fetchone()[0]
+        except TypeError:
+            return None
+
 if __name__ == "__main__":
-    import subprocess
-    subprocess.run(["rm", "-r", "tmdbcache/"])
+    # import subprocess
+    # subprocess.run(["rm", "-r", "tmdbcache/"])
     db = Database()
+    print(db.get_all_paths())

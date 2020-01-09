@@ -53,19 +53,18 @@ def searchOneFilm(title, year):
     return next(filmSearch(title, year))
 
 if __name__ == "__main__":
-    db = database.Database()
-    for path in MEDIA_PATHS:
-        if os.path.exists(path):
-            for dir_ in os.listdir(path):
-                if "(" in os.path.split(dir_)[-1]:
-                    s = os.path.split(dir_)[-1].split("(")
-                    title = s[0]
-                    year = int(s[1][:4])
-                    filmfile = files.find_film(os.path.join(path, dir_))
-                    db.add_film(filmfile, searchOneFilm(title, year))
-                    print(title, year)
+    # db = database.Database()
+    # for path in MEDIA_PATHS:
+    #     if os.path.exists(path):
+    #         for dir_ in os.listdir(path):
+    #             if "(" in os.path.split(dir_)[-1]:
+    #                 s = os.path.split(dir_)[-1].split("(")
+    #                 title = s[0]
+    #                 year = int(s[1][:4])
+    #                 filmfile = files.find_film(os.path.join(path, dir_))
+    #                 db.add_film(filmfile, searchOneFilm(title, year))
+    #                 print(title, year)
 
+    print(searchOneFilm("1984", 1984))
 
-
-    
     print("\n\n", APICALLS, "API calls")

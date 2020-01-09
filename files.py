@@ -110,6 +110,15 @@ def resize(img, **kwargs):
         return img.resize((basewidth, hsize), Image.ANTIALIAS)
     raise TypeError("Missing argument: must have 'height' or 'width'.")
 
+def get_all_films():
+    films = []
+    for path in tmdb.MEDIA_PATHS:
+        if os.path.exists(path):
+            for dir_ in os.listdir(path):
+                if "(" in os.path.split(dir_)[-1]:
+                    films.append(os.path.join(path, dir_))
+
+    return films
 
 class MetadataException(Exception):
     pass
