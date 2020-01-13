@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+from tkinter import messagebox
 import math as maths
 import screeninfo
 import threading
@@ -49,6 +50,8 @@ class tkFilmViewer(tk.Tk):
         menubar.add_cascade(label = "Settings", menu = settingsmenu)
         aboutmenu = tk.Menu(menubar, tearoff = False)
         menubar.add_cascade(label = "About", menu = aboutmenu)
+
+        media_search(self)
 
     def show_screen(self, screen):
         print("changing screen to", screen)
@@ -150,7 +153,12 @@ class MediaList(tk.Frame):
             self.mediadata[key]["filename"] = files.find_film(key)
             imgpath = tdb.get_poster_img(os.path.join(key, self.mediadata[key]["filename"]))
             if imgpath is None:
-                print("TODO")
+                #we don't have metadata cached, so download it
+                #TODO do this in another thread and change the status bar
+                title, year = files.extract_film_name_year(key)
+                data = tmdb.searchOneFilm(title, year)
+                tdb.add_film(os.path.join(key, value["filename"]), data)
+                imgpath = tdb.get_poster_img(os.path.join(key, self.mediadata[key]["filename"]))
             try:
                 self.mediadata[key]["image"] = ImageTk.PhotoImage(files.resize(files.get_image(imgpath), width = 150))
                 self.mediadata[key]["button"].config(image = self.mediadata[key]["image"])
@@ -160,7 +168,6 @@ class MediaList(tk.Frame):
 
         self.parent.parent.controller.bottombar.bar_progress['value'] = 0
         self.parent.parent.controller.bottombar.lbl_status.config(text = "Ready")
-
 
     def _place_media(self):
         self.frame.grid_forget()
@@ -188,8 +195,15 @@ class MediaList(tk.Frame):
 
     def _on_mousewheel(self, event):
         if self.parent.parent.controller.active_screen == MainScreen:
-            if platform.system() == "Windows" or platform.system() == "Linux":
+            if platform.system() == "Windows":
                 self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+                print("Scrolling...", event)
+            elif platform.system() == "Linux":
+                if event.num == 4:
+                    delta = -1
+                elif event.num == 5:
+                    delta = 1
+                self.canvas.yview_scroll(delta, "units")
             else:
                 self.canvas.yview_scroll(event.delta, "units")
 
@@ -204,6 +218,56 @@ class FilmScreen(tk.Frame):
 
     def onopen(self):
         pass
+
+class MediaSearchWindow(tk.Toplevel):
+    def __init__(self, parent, title = "", year = "", searchingfor = None):
+        tk.Toplevel.__init__(self, parent)
+        self.title("Media Search Window")
+
+        self._ent_title = ttk.Entry(self)
+        self._ent_year = ttk.Entry(self, width = 5)
+        self._rbm_variable = tk.StringVar()
+        self._rbn_film = ttk.Radiobutton(self, variable = self._rbm_variable, text = "Film", value = "film", command = lambda: self._ent_year.config(state = tk.NORMAL))
+        self._rbn_tv = ttk.Radiobutton(self, variable = self._rbm_variable, text = "TV", value = "tv", command = self._clear_year)
+        ttk.Label(self, text = "Title:").grid(row = 0, column = 0, rowspan = 2, padx = 5)
+        self._ent_title.grid(row = 0, column = 1, rowspan = 2)
+        ttk.Label(self, text = "Year:").grid(row = 0, column = 2, rowspan = 2, padx = 5)
+        self._ent_year.grid(row = 0, column = 3, rowspan = 2)
+        self._rbn_film.grid(row = 0, column = 4, padx = 10, sticky = tk.W)
+        self._rbn_tv.grid(row = 1, column = 4, padx = 10, sticky = tk.W)
+        ttk.Button(self, text = "Search", command = self._search).grid(row = 0, column = 5, rowspan = 2, padx = 5)
+
+        self._ent_title.insert(0, title)
+        self._ent_year.insert(0, year)
+        if searchingfor == "tv":
+            self._rbn_tv.invoke()
+            self._rbn_film.config(state = tk.DISABLED)
+            self._rbn_tv.config(state = tk.DISABLED)
+        elif searchingfor == "film":
+            self._rbn_film.invoke()
+            self._rbn_film.config(state = tk.DISABLED)
+            self._rbn_tv.config(state = tk.DISABLED)
+
+        if searchingfor is not None:
+            self._search()
+
+    def _search(self):
+        if self._rbm_variable.get() == "tv":
+            print("tv")
+        elif self._rbm_variable.get() == "film":
+            year = int(self._ent_year.get())
+            # for item in tmdb.filmSearch(self._ent_title.get(), year):
+            #     print(item)
+        else:
+            messagebox.showwarning("Error", "You need to select if you're searching for TV or film")
+
+    def _clear_year(self):
+        self._ent_year.delete(0, tk.END)
+        self._ent_year.config(state = tk.DISABLED)
+
+def media_search(parent):
+    # MediaSearchWindow(parent)
+    MediaSearchWindow(parent, title = "1984", year = 1984, searchingfor="film")
 
 def get_metadata(path):
     pass

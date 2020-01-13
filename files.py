@@ -120,9 +120,15 @@ def get_all_films():
 
     return films
 
+def extract_film_name_year(path):
+    s = os.path.split(path)[-1].split("(")
+    return s[0][:-1], int(s[1][:4])
+
 class MetadataException(Exception):
     pass
 
 if __name__ == "__main__":
-    get_image("/upgi8oTlMthM9sweAyBoXqr8doZ.jpg")
+    # get_image("/upgi8oTlMthM9sweAyBoXqr8doZ.jpg")
+    print(extract_film_name_year("/media/veracrypt2/Videos/The Pianist (2002) [1080p]/The.Pianist.2002.1080p.BrRip.x264.YIFY.mp4"))
+    print(extract_film_name_year("/media/veracrypt2/Videos/War and Peace (1967) [1080p]/Part 1/War and Peace (Война и мир) (HD) Part 1-1- Andrei Bolkonsky.mkv"))
 

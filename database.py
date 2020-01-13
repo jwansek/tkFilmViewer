@@ -2,6 +2,7 @@ import database
 import sqlite3
 import tmdb
 import os
+import re
 
 class Database:
     def __init__(self):
@@ -121,8 +122,37 @@ class Database:
         except TypeError:
             return None
 
+    def get_film(self, filepath):
+        self.cursor.execute("SELECT * FROM films WHERE path = ?;", (filepath, ))
+        try:
+            sqlout = self.cursor.fetchall()[0]
+        except TypeError:
+            title, year = files.extract_film_name_year(filepath)
+            self.add_film(filepath, tmdb.searchOneFilm(title, year))
+            return self.get_film(filepath)
+
+        else:
+            # self.cursor.execute("SELECT sql FROM sqlite_master WHERE tbl_name = 'films' AND type = 'table';")
+            # fieldnames = [i.split()[0] for i in self.cursor.fetchall()[0][0].split("\n")[1:-2]]
+            fieldnames = ['film_id', 'tmdb_id', 'imdb_id', 'path', 'original_name', 'name', 'release', 'overview', 'original_language', 'budget', 'revenue', 'backdrop_img', 'poster_img', 'runtime', 'score', 'url']
+            out = {}
+            for i in range(len(sqlout)):
+                out[fieldnames[i]] = sqlout[i]
+            self.cursor.execute("SELECT character, name, img FROM castmembers WHERE film_id = ? ORDER BY display_order;", (out["film_id"], ))
+            out["cast"] = self.cursor.fetchall()
+            self.cursor.execute("SELECT name, job, img FROM crewmembers WHERE film_id = ? ORDER BY display_order;", (out["film_id"], ))
+            out["crew"] = self.cursor.fetchall()
+            self.cursor.execute("SELECT iso_3166_1, name FROM production_countries INNER JOIN countries ON countries.country_id = production_countries.country_id WHERE film_id = ?;", (out["film_id"], ))
+            out["production_countries"] = self.cursor.fetchall()
+            self.cursor.execute("SELECT tmdb_id, name FROM media_genres INNER JOIN genres ON genres.genre_id = media_genres.genre_id WHERE film_id = ?;", (out["film_id"], ))
+            return out
+            self.cursor.execute("SELECT iso_639_1, name FROM spoken_languages INNER JOIN languages ON languages.language_id = spoken_languages.language_id WHERE film_id = ?;", (out["film_id"], ))
+            out["spoken_languages"] = self.cursor.fetchall()
+            return out
+
+
 if __name__ == "__main__":
     # import subprocess
     # subprocess.run(["rm", "-r", "tmdbcache/"])
     db = Database()
-    print(db.get_all_paths())
+    print(db.get_film(r"V:\Videos\12 Years a Slave (2013) [1080p]\12.Years.a.Slave.2013.1080p.BluRay.x264.YIFY.mp4"))
