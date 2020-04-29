@@ -156,7 +156,7 @@ class MediaList(tk.Frame):
                 #we don't have metadata cached, so download it
                 #TODO do this in another thread and change the status bar
                 title, year = files.extract_film_name_year(key)
-                data = tmdb.searchOneFilm(title, year)
+                data = tmdb.searchOne(title, year)
                 tdb.add_film(os.path.join(key, value["filename"]), data)
                 imgpath = tdb.get_poster_img(os.path.join(key, self.mediadata[key]["filename"]))
             try:
@@ -197,7 +197,6 @@ class MediaList(tk.Frame):
         if self.parent.parent.controller.active_screen == MainScreen:
             if platform.system() == "Windows":
                 self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-                print("Scrolling...", event)
             elif platform.system() == "Linux":
                 if event.num == 4:
                     delta = -1
@@ -220,9 +219,14 @@ class FilmScreen(tk.Frame):
         pass
 
 class MediaSearchWindow(tk.Toplevel):
+
+    buttons = []
+
     def __init__(self, parent, title = "", year = "", searchingfor = None):
         tk.Toplevel.__init__(self, parent)
         self.title("Media Search Window")
+        self.resizable(False, False)
+        # self.geometry("395x500")
 
         self._ent_title = ttk.Entry(self)
         self._ent_year = ttk.Entry(self, width = 5)
@@ -236,6 +240,28 @@ class MediaSearchWindow(tk.Toplevel):
         self._rbn_film.grid(row = 0, column = 4, padx = 10, sticky = tk.W)
         self._rbn_tv.grid(row = 1, column = 4, padx = 10, sticky = tk.W)
         ttk.Button(self, text = "Search", command = self._search).grid(row = 0, column = 5, rowspan = 2, padx = 5)
+
+        ttk.Separator(self, orient = tk.HORIZONTAL).grid(row = 2, column = 0, columnspan = 6, sticky = tk.EW)
+
+        self.grid_rowconfigure(0, weight = 1)
+        self.grid_columnconfigure(0, weight = 1)
+
+        self.scrollspace = tk.Frame(self)
+        self.scrollspace.grid(row = 3, column = 0, columnspan = 6, sticky = tk.S)
+        self.canvas = tk.Canvas(self.scrollspace)
+        self.frame = tk.Frame(self.canvas)
+        sbar = tk.Scrollbar(self.scrollspace, orient = tk.VERTICAL, command = self.canvas.yview)
+        self.canvas.configure(yscrollcommand = sbar.set)
+
+        sbar.pack(side = tk.RIGHT, fill = tk.Y)
+        self.canvas.create_window((0, 0), window = self.frame, anchor = tk.NW)
+        self.canvas.pack(side = tk.LEFT, fill = tk.BOTH, expand = True)
+        self.frame.bind("<Configure>", self._on_scroll)
+
+        # self.bind("<MouseWheel>", self._on_mousewheel)
+        # self.bind("<Button-4>", self._on_mousewheel)
+        # self.bind("<Button-5>", self._on_mousewheel)
+        self.bind("<Configure>", self._on_window_config)
 
         self._ent_title.insert(0, title)
         self._ent_year.insert(0, year)
@@ -252,6 +278,10 @@ class MediaSearchWindow(tk.Toplevel):
             self._search()
 
     def _search(self):
+        for i, name  in enumerate([i for i in range(52)], 0):
+            self.buttons.append(ttk.Button(self.frame, text = i))
+            self.buttons[i].pack()
+
         if self._rbm_variable.get() == "tv":
             print("tv")
         elif self._rbm_variable.get() == "film":
@@ -265,6 +295,14 @@ class MediaSearchWindow(tk.Toplevel):
         self._ent_year.delete(0, tk.END)
         self._ent_year.config(state = tk.DISABLED)
 
+    def _on_scroll(self, event):
+        print("scroll", event)
+        self.canvas.configure(scrollregion = self.canvas.bbox(tk.ALL), width = event.width, height = self.scrollspace.winfo_height() - 20)
+
+    def _on_window_config(self, event):
+        print("window", event)
+        # self.canvas.configure(width = self.winfo_width(), height = self.winfo_height() - 20)
+
 def media_search(parent):
     # MediaSearchWindow(parent)
     MediaSearchWindow(parent, title = "1984", year = 1984, searchingfor="film")
@@ -275,3 +313,8 @@ def get_metadata(path):
 if __name__ == "__main__":
     app = tkFilmViewer()
     app.mainloop()
+
+    #main = tk.Tk()
+    #MediaSearchWindow(main, title = "1984", year = 1984, searchingfor="film")
+
+    #main.mainloop()

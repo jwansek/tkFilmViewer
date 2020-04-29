@@ -27,6 +27,8 @@ class TMDBRequest:
         self.response = requests.get(url)
         if self.response.status_code == 200:
             self.decoded = json.loads(self.response.content.decode())
+        else:
+            raise TMDBRequestException(self.response)
     
     def get_results(self):
         return self.decoded["results"]
@@ -35,36 +37,36 @@ class TMDBRequestException(Exception):
     pass
 
 #TODO: use a recursive generator with `pages` to get more than 20 results
-def filmSearch(title, year, maxresults = None):
-    url = "https://api.themoviedb.org/3/search/movie?api_key=%s&language=%s&query=%s&page=1&include_adult=false&year=%i" % (APIKEY, LANGUAGE, title, year)
+def search(title, year = None, maxresults = 10):
+    if year is None:
+        searchingfor = "tv"
+        url = "https://api.themoviedb.org/3/search/tv?api_key=%s&language=%s&query=%s&page=1&include_adult=false" % (APIKEY, LANGUAGE, title)
+    else:
+        searchingfor = "movie"
+        url = "https://api.themoviedb.org/3/search/movie?api_key=%s&language=%s&query=%s&page=1&include_adult=false&year=%i" % (APIKEY, LANGUAGE, title, year)
+
     request = TMDBRequest(url)
     results = request.get_results()
     for i, result in enumerate(results, 0):
         if maxresults is not None and i >= maxresults:
             break
-        url = "https://api.themoviedb.org/3/movie/%s?api_key=%s&language=%s" % (result["id"], APIKEY, LANGUAGE)
-        filmdata = TMDBRequest(url)
-        url = "https://api.themoviedb.org/3/movie/%s/credits?api_key=%s" % (result["id"], APIKEY)
+        url = "https://api.themoviedb.org/3/%s/%s?api_key=%s&language=%s" % (searchingfor, result["id"], APIKEY, LANGUAGE)
+        mediadata = TMDBRequest(url)
+        url = "https://api.themoviedb.org/3/%s/%s/credits?api_key=%s" % (searchingfor, result["id"], APIKEY)
         creditsdata = TMDBRequest(url)
-        yield {"data": filmdata.decoded, "cast":creditsdata.decoded["cast"], "crew":creditsdata.decoded["crew"]}
+        yield {"data": mediadata.decoded, "cast":creditsdata.decoded["cast"], "crew":creditsdata.decoded["crew"]}
 
-def searchOneFilm(title, year):
-    # return [x for _, x in zip(range(1), filmSearch(title, year))][0]
-    return next(filmSearch(title, year))
+def getEpisodes(tv_id, season_id, episodes):
+    out = []
+    for episode in range(1, episodes + 1):
+        url = "https://api.themoviedb.org/3/tv/%s/season/%s/episode/%s?api_key=%s&language=%s" % (tv_id, season_id, episode, APIKEY, LANGUAGE)
+        request = TMDBRequest(url)
+        out.append(request.decoded)
+    return out
+        
+def searchOne(title, year = None):
+    return next(search(title, year))
 
 if __name__ == "__main__":
-    # db = database.Database()
-    # for path in MEDIA_PATHS:
-    #     if os.path.exists(path):
-    #         for dir_ in os.listdir(path):
-    #             if "(" in os.path.split(dir_)[-1]:
-    #                 s = os.path.split(dir_)[-1].split("(")
-    #                 title = s[0]
-    #                 year = int(s[1][:4])
-    #                 filmfile = files.find_film(os.path.join(path, dir_))
-    #                 db.add_film(filmfile, searchOneFilm(title, year))
-    #                 print(title, year)
-
-    print(searchOneFilm("1984", 1984))
-
-    print("\n\n", APICALLS, "API calls")
+    # print(searchOne("Line of Duty")["data"]["id"])
+    print(getEpisodes("43982", 1, 5))
